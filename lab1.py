@@ -21,12 +21,7 @@ def find_closest_multiple_of_2(value: int):
     return res
 
 
-def strassen(A: np.ndarray, B: np.ndarray):
-    if A.size == 1:
-        return A[0][0] * B
-    elif B.size == 1:
-        return B[0][0] * A
-
+def pad_matrices(A: np.ndarray, B: np.ndarray):
     # Fancy check for multiple of 2 in matrix shapes
     if (
         A.shape != B.shape
@@ -50,6 +45,17 @@ def strassen(A: np.ndarray, B: np.ndarray):
         A = A_zeros
         B = B_zeros
 
+    return A, B
+
+
+def strassen(A: np.ndarray, B: np.ndarray):
+    if A.size == 1:
+        return A[0][0] * B
+    elif B.size == 1:
+        return B[0][0] * A
+
+    A, B = pad_matrices(A, B)
+
     # division to 4 quarters
     a, b, c, d = quarters(A)
     e, f, g, h = quarters(B)
@@ -70,6 +76,27 @@ def strassen(A: np.ndarray, B: np.ndarray):
 
     return np.hstack(
         (np.vstack((quarter_lu, quarter_ld)), np.vstack((quarter_ru, quarter_rd)))
+    )
+
+
+def binet(A: np.ndarray, B: np.ndarray):
+    if A.size == 1:
+        return A[0][0] * B
+    elif B.size == 1:
+        return B[0][0] * A
+
+    A, B = pad_matrices(A, B)
+
+    a_11, a_12, a_21, a_22 = quarters(A)
+    b_11, b_12, b_21, b_22 = quarters(B)
+
+    q_11 = (binet(a_11, b_11) + binet(a_12, b_21))
+    q_12 = (binet(a_11, b_12) + binet(a_12, b_22))
+    q_21 = (binet(a_21, b_11) + binet(a_22, b_21))
+    q_22 = (binet(a_21, b_12) + binet(a_22, b_22))
+
+    return np.hstack(
+        (np.vstack((q_11, q_21)), np.vstack((q_12, q_22)))
     )
 
 
@@ -103,5 +130,12 @@ if __name__ == "__main__":
          [2, 2, 2, 2]], dtype=np.float64
     )
 
+    print("Strassen:")
     print(strassen(test_A, test_B))
+    print('')
     print(strassen(test_A_2, test_B_2))
+
+    print("\nBinet:")
+    print(binet(test_A, test_B))
+    print('')
+    print(binet(test_A_2, test_B_2))
