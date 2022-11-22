@@ -49,9 +49,12 @@ def pad_matrices(A: np.ndarray, B: np.ndarray):
 
 
 def strassen(A: np.ndarray, B: np.ndarray):
+    global CNT
     if A.size == 1:
+        CNT += B.size
         return A[0][0] * B
     elif B.size == 1:
+        CNT += A.size
         return B[0][0] * A
 
     A, B = pad_matrices(A, B)
@@ -59,6 +62,7 @@ def strassen(A: np.ndarray, B: np.ndarray):
     # division to 4 quarters
     a, b, c, d = quarters(A)
     e, f, g, h = quarters(B)
+    quarter_size = a.size
 
     p1 = strassen(a, f - h)
     p2 = strassen(a + b, h)
@@ -68,11 +72,15 @@ def strassen(A: np.ndarray, B: np.ndarray):
     p6 = strassen(b - d, g + h)
     p7 = strassen(a - c, e + f)
 
+    CNT += 10 * quarter_size
+
     # calculating the 4 quarters of the result matrix
     quarter_lu = p5 + p4 - p2 + p6
     quarter_ru = p1 + p2
     quarter_ld = p3 + p4
     quarter_rd = p1 + p5 - p3 - p7
+
+    CNT += 8 * quarter_size
 
     return np.hstack(
         (np.vstack((quarter_lu, quarter_ld)), np.vstack((quarter_ru, quarter_rd)))
@@ -101,6 +109,8 @@ def binet(A: np.ndarray, B: np.ndarray):
 
 
 if __name__ == "__main__":
+    CNT = 0
+
     test_A = np.array(
         [[1, 1, 1, 1],
          [2, 2, 2, 2],
