@@ -75,10 +75,10 @@ def create_tree(
     assert 0 <= t_min <= t_max <= n
     assert 0 <= s_min <= s_max <= m
 
-    print("\t" * tab + f"{(t_min, t_max, s_min, s_max)}")
-    U, D, V = randomized_svd(A[t_min:t_max, s_min:s_max], n_components=r)
+    # print("\t" * tab + f"{(t_min, t_max, s_min, s_max)}")
+    U, D, V = randomized_svd(A[t_min:t_max, s_min:s_max], n_components=r+1)
 
-    if (D < epsilon).all() or D.size == 1:
+    if D.size <= r or D[r] < epsilon:
         v = compress_matrix(A, t_min, t_max, s_min, s_max, r)
     else:
         v = Node(0, 0, [], t_min=t_min, t_max=t_max, s_min=s_min, s_max=s_max)
@@ -112,33 +112,47 @@ def _print_tree(T: Node, ax, tab=0):
                 color=COLORS[np.random.randint(0, 148)],
             )
         )
-        print("\t" * tab + f"| {(T.t_min, T.t_max, T.s_min, T.s_max)}")
+        # print("\t" * tab + f"| {(T.t_min, T.t_max, T.s_min, T.s_max)}")
     else:
         for v in T.sons:
             _print_tree(v, ax, tab + 1)
 
 
-def print_tree(T: Node):
+def print_tree(T: Node, A: np.ndarray):
     fig, ax = plt.subplots()
     ax.plot([0, T.t_max, T.t_max, 0, 0], [0, 0, T.s_max, T.s_max, 0], color="black")
 
     _print_tree(T, ax)
 
+    plt.title(f'SVD for matrix A ({A.shape[0]} x {A.shape[1]})')
     plt.show()
 
 
-if __name__ == "__main__":
-    # A = np.array([
-    #     [1, 3, 5],
-    #     [6, 4, 8],
-    #     [1, 1, 2]
-    # ])
+def gen_matrix(n: int, m: int, zero_threshold: float):
 
-    B = np.random.uniform(0.0, 1.0, (32, 32))
+    assert 0.0 <= zero_threshold <= 1.0
+
+    A = np.random.uniform(0.0, 1.0, (n, m))
+
+    zero_mask = np.random.uniform(0.0, 1.0, (n, m))
+
+    A[zero_mask < zero_threshold] = 0
+
+    return A
+
+
+if __name__ == "__main__":
+    zero_percentage = 0.90
+
+    A = gen_matrix(256, 256, zero_percentage)
+    print('======================= Matrix A =======================')
+    print(f'Zero percentage: {zero_percentage}')
+    print(A)
+
     R = 5
     EPSILON = 1e-08
 
-    t, s = B.shape
+    t, s = A.shape
 
-    tree = create_tree(B, 0, t, 0, s, R, EPSILON)
-    print_tree(tree)
+    tree = create_tree(A, 0, t, 0, s, R, EPSILON)
+    print_tree(tree, A)
