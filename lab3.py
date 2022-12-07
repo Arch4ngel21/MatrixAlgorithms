@@ -29,7 +29,7 @@ class Node:
 def compress_matrix(A, t_min, t_max, s_min, s_max, r):
     U, D, V = randomized_svd(A[t_min:t_max, s_min:s_max], n_components=r)
 
-    if (A[t_min:t_max, s_min:s_max] == 0).any():
+    if (A[t_min:t_max, s_min:s_max] == 0).all():
         v = Node(
             0,
             (t_max - t_min + 1) * (s_max - s_min + 1),
@@ -50,8 +50,8 @@ def compress_matrix(A, t_min, t_max, s_min, s_max, r):
         (t_max - t_min + 1) * (s_max - s_min + 1),
         [],
         ro,
-        U=U[:, 1:rank],
-        V=np.diag(D[1:rank]) @ V[1:rank, :],
+        U=U[:, :rank],
+        V=np.diag(D[:rank]) @ V[:rank, :],
         t_min=t_min,
         t_max=t_max,
         s_min=s_min,
@@ -76,7 +76,7 @@ def create_tree(
     assert 0 <= s_min <= s_max <= m
 
     # print("\t" * tab + f"{(t_min, t_max, s_min, s_max)}")
-    U, D, V = randomized_svd(A[t_min:t_max, s_min:s_max], n_components=r+1)
+    U, D, V = randomized_svd(A[t_min:t_max, s_min:s_max], n_components=r + 1)
 
     if D.size <= r or D[r] < epsilon:
         v = compress_matrix(A, t_min, t_max, s_min, s_max, r)
@@ -124,7 +124,7 @@ def print_tree(T: Node, A: np.ndarray):
 
     _print_tree(T, ax)
 
-    plt.title(f'SVD for matrix A ({A.shape[0]} x {A.shape[1]})')
+    plt.title(f"SVD for matrix A ({A.shape[0]} x {A.shape[1]})")
     plt.show()
 
 
@@ -141,12 +141,51 @@ def gen_matrix(n: int, m: int, zero_threshold: float):
     return A
 
 
+def compressed_matrix_deconstruction(T: Node, epsilon):
+    if len(T.sons) == 0:
+        if T.rank > 0:
+            M = T.U @ T.V
+            M[M < epsilon] = 0
+            return M
+        else:
+            return np.zeros((T.t_max - T.t_min, T.s_max - T.s_min))
+
+    else:
+        return np.hstack(
+            (
+                np.vstack(
+                    (
+                        compressed_matrix_deconstruction(T.sons[0], epsilon),
+                        compressed_matrix_deconstruction(T.sons[1], epsilon),
+                    )
+                ),
+                np.vstack(
+                    (
+                        compressed_matrix_deconstruction(T.sons[2], epsilon),
+                        compressed_matrix_deconstruction(T.sons[3], epsilon),
+                    )
+                ),
+            )
+        )
+
+
+def decompressed_test(T: Node, A: np.ndarray, epsilon):
+    decomposed_A = compressed_matrix_deconstruction(T, epsilon)
+
+    assert decomposed_A.shape == A.shape
+
+    print(
+        "\nSquare error between A and decomposed A:",
+        np.power(np.sum(A - decomposed_A), 2),
+    )
+
+
 if __name__ == "__main__":
     zero_percentage = 0.90
 
-    A = gen_matrix(256, 256, zero_percentage)
-    print('======================= Matrix A =======================')
-    print(f'Zero percentage: {zero_percentage}')
+    A = gen_matrix(16, 16, zero_percentage)
+    print("======================= Matrix A =======================")
+    print(f"Zero percentage: {zero_percentage}")
     print(A)
 
     R = 5
@@ -155,4 +194,7 @@ if __name__ == "__main__":
     t, s = A.shape
 
     tree = create_tree(A, 0, t, 0, s, R, EPSILON)
+
+    decompressed_test(tree, A, EPSILON)
+
     print_tree(tree, A)
