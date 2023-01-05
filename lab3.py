@@ -1,5 +1,11 @@
 from dataclasses import dataclass
 from typing import List, Optional
+import timeit
+
+"""
+Jak przechodzi poniżej r, to U, V = A, I
+"""
+
 
 import numpy as np
 from sklearn.utils.extmath import randomized_svd
@@ -75,7 +81,6 @@ def create_tree(
     assert 0 <= t_min <= t_max <= n
     assert 0 <= s_min <= s_max <= m
 
-    # print("\t" * tab + f"{(t_min, t_max, s_min, s_max)}")
     U, D, V = randomized_svd(A[t_min:t_max, s_min:s_max], n_components=r + 1)
 
     if D.size <= r or D[r] < epsilon:
@@ -112,7 +117,6 @@ def _print_tree(T: Node, ax, tab=0):
                 color=COLORS[np.random.randint(0, 148)],
             )
         )
-        # print("\t" * tab + f"| {(T.t_min, T.t_max, T.s_min, T.s_max)}")
     else:
         for v in T.sons:
             _print_tree(v, ax, tab + 1)
@@ -183,7 +187,7 @@ def decompressed_test(T: Node, A: np.ndarray, epsilon):
 if __name__ == "__main__":
     zero_percentage = 0.90
 
-    A = gen_matrix(16, 16, zero_percentage)
+    A = gen_matrix(256, 256, zero_percentage)
     print("======================= Matrix A =======================")
     print(f"Zero percentage: {zero_percentage}")
     print(A)
@@ -198,3 +202,4 @@ if __name__ == "__main__":
     decompressed_test(tree, A, EPSILON)
 
     print_tree(tree, A)
+
