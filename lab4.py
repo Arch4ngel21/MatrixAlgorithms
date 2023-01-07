@@ -150,7 +150,7 @@ def matrix_vector_mult(v: Node, A: np.ndarray):
 
     rows = A.shape[0]
     A_1 = A[:rows//2, :]
-    A_2 = A[rows//2 + 1: rows, :]
+    A_2 = A[rows//2: rows, :]
     B_1_1 = matrix_vector_mult(v.sons[0], A_1)
     B_1_2 = matrix_vector_mult(v.sons[1], A_2)
     B_2_1 = matrix_vector_mult(v.sons[2], A_1)
@@ -161,29 +161,23 @@ def matrix_vector_mult(v: Node, A: np.ndarray):
     ))
 
 
-def matrix_vector_add(v: Node, A: Tuple[np.ndarray, np.ndarray]):
-    U, V = A
-
+def matrix_vector_add(v: Node, A: np.ndarray):
     if len(v.sons) == 0:
-        # U1 = U + v.U
-        # V1 = V + v.V
-        return U @ V + v.U @ v.V
+        if v.rank > 0:
+            # U1 = U + v.U
+            # V1 = V + v.V
+            return A + (v.U @ v.V)
+        else:
+            return A
     else:
-        u_mid = U.shape[0] // 2
-        v_mid = V.shape[1] // 2
+        mid_rows = A.shape[0] // 2
+        mid_cols = A.shape[1] // 2
 
-        U1, U2 = U[:u_mid, :], U[u_mid:, :]
-        V1, V2 = V[:, :v_mid], V[:, v_mid:]
+        A1, A2, A3, A4 = A[:mid_rows, :mid_cols], A[mid_rows:, :mid_cols], A[:mid_rows, mid_cols:], A[mid_rows:, mid_cols:]
 
         return np.hstack((
-            np.vstack((
-                matrix_vector_add(v.sons[0], U1 @ V1),
-                matrix_vector_add(v.sons[2], U2 @ V1)
-            )),
-            np.vstack((
-                matrix_vector_add(v.sons[1], U1 @ V2),
-                matrix_vector_add(v.sons[3], U2 @ V2)
-            ))
+                np.vstack((matrix_vector_add(v.sons[0], A1), matrix_vector_add(v.sons[2], A2))),
+                np.vstack((matrix_vector_add(v.sons[1], A3), matrix_vector_add(v.sons[3], A4)))
         ))
 
 
@@ -223,12 +217,12 @@ def matrix_matrix_add(v: Node, w: Node):
 
         return np.hstack((
             np.vstack((
-                matrix_vector_add(B1, (U1, V1)),
-                matrix_vector_add(B3, (U2, V1))
+                matrix_vector_add(B1, U1 @ V1),
+                matrix_vector_add(B3, U2 @ V1)
             )),
             np.vstack((
-                matrix_vector_add(B2, (U1, V2)),
-                matrix_vector_add(B4, (U2, V2))
+                matrix_vector_add(B2, U1 @ V2),
+                matrix_vector_add(B4, U2 @ V2)
             ))
         ))
 

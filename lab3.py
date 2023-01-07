@@ -149,7 +149,7 @@ def compressed_matrix_deconstruction(T: Node, epsilon):
     if len(T.sons) == 0:
         if T.rank > 0:
             M = T.U @ T.V
-            M[M < epsilon] = 0
+            M[np.abs(M) < epsilon] = 0
             return M
         else:
             return np.zeros((T.t_max - T.t_min, T.s_max - T.s_min))
